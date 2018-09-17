@@ -135,7 +135,10 @@ export default class TextToSVG {
     const metrics = this.getMetrics(text, options);
     const path = this.font.getPath(text, metrics.x, metrics.baseline, fontSize, { kerning, letterSpacing, tracking });
 
-    return path.toPathData();
+    return {
+      data: path.toPathData(),
+      boundingBox: path.getBoundingBox()
+    }
   }
 
   getPath(text, options = {}) {
@@ -144,17 +147,25 @@ export default class TextToSVG {
       .join(' ');
     const d = this.getD(text, options);
 
+    var data
     if (attributes) {
-      return `<path ${attributes} d="${d}"/>`;
+      data = `<path ${attributes} d="${d.data}"/>`;
+    } else {
+      data = `<path d="${d.data}"/>`
     }
 
-    return `<path d="${d}"/>`;
+    return {
+      data,
+      boundingBox: d.boundingBox
+    }
   }
 
   getSVG(text, options = {}) {
     const metrics = this.getMetrics(text, options);
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${metrics.width}" height="${metrics.height}">`;
-    svg += this.getPath(text, options);
+    const path = this.getPath(text, options);
+    const bb = path.boundingBox;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${metrics.width}" height="${metrics.height}" viewBox="${bb.x1} ${bb.y1} ${bb.x2} ${bb.y2}">`;
+    svg += path.data;
     svg += '</svg>';
 
     return svg;
@@ -179,10 +190,13 @@ export default class TextToSVG {
     options.x += origin.x;
     options.y += origin.y;
 
+    const path = this.getPath(text, options);
+    const boundingBox = path.boundingBox;
+
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${box.width}" height="${box.height}">`;
     svg += `<path fill="none" stroke="red" stroke-width="1" d="M0,${origin.y}L${box.width},${origin.y}"/>`; // X Axis
     svg += `<path fill="none" stroke="red" stroke-width="1" d="M${origin.x},0L${origin.x},${box.height}"/>`; // Y Axis
-    svg += this.getPath(text, options);
+    svg += path.data;
     svg += '</svg>';
 
     return svg;
