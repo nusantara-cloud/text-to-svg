@@ -37,6 +37,36 @@ export default class TextToSVG {
     });
   }
 
+  // Given text and width, return fontSize needed
+  // to get that width.
+  // This is basically the inverse of getWidth() function
+  getFontSize(text, width, options = {}) {
+    const kerning = 'kerning' in options ? options.kerning : true;
+
+    let fontSizeMultiplier = 0
+    const glyphs = this.font.stringToGlyphs(text);
+    for (let i = 0; i < glyphs.length; i++) {
+      const glyph = glyphs[i];
+
+      if (glyph.advanceWidth) {
+        fontSizeMultiplier += glyph.advanceWidth * 1 / this.font.unitsPerEm;
+      }
+
+      if (kerning && i < glyphs.length - 1) {
+        const kerningValue = this.font.getKerningValue(glyph, glyphs[i + 1]);
+        fontSizeMultiplier += kerningValue * 1 / this.font.unitsPerEm;
+      }
+
+      if (options.letterSpacing) {
+        fontSizeMultiplier += options.letterSpacing;
+      } else if (options.tracking) {
+        fontSizeMultiplier += (options.tracking / 1000);
+      }
+    }
+
+    return width / fontSizeMultiplier
+  }
+
   getWidth(text, options) {
     const fontSize = options.fontSize || 72;
     const kerning = 'kerning' in options ? options.kerning : true;
